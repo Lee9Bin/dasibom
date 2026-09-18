@@ -1,0 +1,33 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+spring:
+  application:
+    name: dasibom-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3307/dasibom?connectionTimeZone=Asia/Seoul}
+    username: ${DB_USERNAME:dasibom}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+dasibom:
+  tour-api-key: ${TOUR_API_SERVICE_KEY:}
+  admin-token: ${ADMIN_TOKEN:}
+  cookie-secure: ${COOKIE_SECURE:false}
+  app-origin: ${APP_ORIGIN:http://localhost:3000}
+  sync-enabled: ${SYNC_ENABLED:false}
+

@@ -1,0 +1,14 @@
+import { regionSchema, type Region, type Photo, type Place, type Crowd } from "./types";
+const backend = process.env.BACKEND_URL ?? "http://127.0.0.1:8080";
+export async function api<T>(path:string):Promise<T|null> {
+  try { const res=await fetch(`${backend}/api/v1${path}`,{cache:"no-store",signal:AbortSignal.timeout(6000)});if(!res.ok)return null;return await res.json() as T; }
+  catch { return null; }
+}
+export async function getRegions(query=""):Promise<Region[]|null>{
+  const data=await api<{items:unknown[]}>(`/regions?size=100&${query}`);if(!data)return null;
+  const parsed=regionSchema.array().safeParse(data.items);return parsed.success?parsed.data:null;
+}
+export async function getRegion(code:string) { if(!/^\d{5}$/.test(code))return null; const data=await api<unknown>(`/regions/${code}`);const parsed=regionSchema.safeParse(data);return parsed.success?parsed.data:null; }
+export const getPhotos=(code:string)=>api<{items:Photo[]}>(`/regions/${code}/photos`);
+export const getPlaces=(code:string)=>api<{items:Place[]}>(`/regions/${code}/places`);
+export const getCrowd=(code:string)=>api<{items:Crowd[]}>(`/regions/${code}/crowding`);

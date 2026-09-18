@@ -1,0 +1,1 @@
+export default function Loading(){return <main id="main" className="wrap page-main" aria-busy="true"><p className="eyebrow">새로운 풍경을 만나러 가는 중</p><div className="skeleton"/><p role="status">잠시만 기다려 주세요.</p></main>;}

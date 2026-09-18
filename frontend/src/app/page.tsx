@@ -1,0 +1,18 @@
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Compass, Leaf, MapPin, Sparkles } from "lucide-react";
+import { api,getRegions } from "@/lib/api";
+import { regionSchema,themeName } from "@/lib/types";
+import { PhotoImage } from "@/components/photo";
+import { RegionCard } from "@/components/region-card";
+export const dynamic="force-dynamic";
+export default async function Home(){
+ const [todayRaw,regions]=await Promise.all([api<unknown>("/home/today"),getRegions()]);const parsed=regionSchema.safeParse(todayRaw);const today=parsed.success?parsed.data:regions?.[0];
+ const cards=regions?.filter(r=>r.code!==today?.code).slice(0,3)??[];
+ return <main id="main"><section className="intro wrap"><div><p className="eyebrow"><span className="tiny-line"/> A NEW WAY TO SEE KOREA</p><h1>익숙한 한국,<br/><span>낯선 설렘을 만나다.</span></h1></div><div className="intro-aside"><p>유명한 곳 너머에도,<br/>당신을 기다리는 풍경이 있어요.</p><Link href="/explore">나만의 여행 발견하기 <ArrowUpRight size={18}/></Link></div></section>
+ <section className="hero wrap" aria-label="오늘의 발견"><div className="hero-photo"><PhotoImage src={today?.heroPhoto?.url} alt={today?.heroPhoto?.title??"오늘의 여행지"} priority sizes="100vw"/><div className="hero-shade"/><div className="hero-top"><span className="light-pill"><span className="pulse-dot"/> 오늘의 발견</span><span className="hero-edition">DAILY DISCOVERY / 01</span></div><div className="hero-copy"><p><MapPin size={15}/>{today?.areaName??"한국의 새로운 풍경"}</p><h2>{today?.name.replace(/[시군]$/,"")??"여행의 시작"}<span>에서<br/>잠시, 쉬어가요.</span></h2><p className="hero-description">{today?.tagline??"오늘의 여행 사진을 준비하고 있어요."}</p><Link className="button button-light" href={today?`/regions/${today.code}`:"/explore"}>이 동네 만나보기 <ArrowUpRight size={18}/></Link></div><div className="hero-bottom"><span>{today?themeName(today.theme):"천천히 발견하는 여행"}</span><span>{today?.heroPhoto?`© ${today.heroPhoto.photographer||"한국관광공사"}`:"사진 수집 준비 중"}</span></div></div><div className="hero-caption"><span>조금 천천히 걸으면, 보이지 않던 것들이 보입니다.</span><span className="caption-coordinate">{today?`${today.latitude.toFixed(4)}° N · ${today.longitude.toFixed(4)}° E`:"DISCOVER YOUR OWN KOREA"}</span></div></section>
+ {!regions&&<div className="notice wrap" role="status">관광 데이터를 연결하고 있어요. 잠시 후 새로고침해 주세요.</div>}
+ <section className="discovery-note wrap"><span className="round-icon"><Compass size={27} strokeWidth={1.3}/></span><div><p className="eyebrow">조금 다른 여행의 기준</p><h2>많이 찾는 곳보다,<br className="mobile-only"/> 오래 기억할 곳을.</h2></div><p>사진으로 마음이 움직이고,<br/>데이터로 여행을 더 깊이 알아가는 곳.<br/><Link href="/methodology">다시봄이 여행을 고르는 방법 <ArrowRight size={15}/></Link></p></section>
+ <section className="recommendations wrap"><div className="section-heading"><div><p className="eyebrow">YOUR NEXT DISCOVERY</p><h2>다음 여행은, 이곳 어때요?</h2></div><Link href="/explore">모든 지역 보기 <ArrowUpRight size={18}/></Link></div><div className="card-grid">{cards.map((r,i)=><RegionCard key={r.code} region={r} index={i}/>)}</div></section>
+ <section className="invitation wrap"><div><p className="eyebrow"><Leaf size={15}/> 취향을 따라 떠나세요</p><h2>오늘의 마음은<br/>어디를 향하나요?</h2></div><div className="theme-links">{[{id:"NATURE",title:"초록 속으로",description:"마음까지 맑아지는 자연"},{id:"HEALING",title:"느린 하루",description:"아무것도 하지 않을 자유"},{id:"CULTURE",title:"새로운 시선",description:"골목과 예술 사이"},{id:"FOOD",title:"동네의 맛",description:"한 끼에 담긴 여행"}].map(t=><Link href={`/explore?theme=${t.id}`} key={t.id}><span><strong>{t.title}</strong><small>{t.description}</small></span><ArrowUpRight size={22}/></Link>)}</div></section>
+ <div className="closing wrap"><Sparkles size={18}/><p>한국의 모든 동네에는, 다시 볼 이유가 있습니다.</p></div></main>;
+}
