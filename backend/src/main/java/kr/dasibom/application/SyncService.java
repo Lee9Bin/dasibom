@@ -35,16 +35,19 @@ public class SyncService {
                 for(String kind:List.of("photos","places","crowding")){
                     try{
                         var data=switch(kind){
-                            case "photos" -> api.fetch("PhotoGalleryService1/gallerySearchList1",Map.of("keyword",r.getName()),24);
+                            case "photos" -> api.fetch("PhotoGalleryService1/gallerySearchList1",Map.of("keyword",r.getName(),"arrange","C"),48).stream().filter(photo->CatalogService.matchesPhotoRegion(r.getName(),photo)).limit(36).toList();
                             case "places" -> api.fetch("KorService2/areaBasedList2",Map.of("lDongRegnCd",r.getAreaCode(),"lDongSignguCd",r.getCode().substring(2),"arrange","Q","contentTypeId","12"),12);
                             default -> api.fetch("TatsCnctrRateService/tatsCnctrRatedList",Map.of("areaCd",r.getAreaCode(),"signguCd",r.getCode(),"tAtsNm",r.getAnchorPlace()),30);
                         };
-                        store.save(r.getCode(),kind,data);success++;
+                        if(data.isEmpty() && !store.read(r.getCode(),kind).isEmpty()) {
+                            failed++;errors.add(r.getCode()+"/"+kind+":EMPTY_RESPONSE_RETAINED");
+                        } else {store.save(r.getCode(),kind,data);success++;}
                     }catch(TourApiClient.TourApiException e){failed++;errors.add(r.getCode()+"/"+kind+":"+e.getMessage());}
                     Thread.sleep(150);
                 }
             }
-            run.finish(failed==0?"SUCCESS":"PARTIAL",success,failed,String.join(";",errors));runs.save(run);
+            String summary=String.join(";",errors);
+            run.finish(failed==0?"SUCCESS":"PARTIAL",success,failed,summary.substring(0,Math.min(summary.length(),1900)));runs.save(run);
         }catch(Exception e){
             if(e instanceof InterruptedException)Thread.currentThread().interrupt();
             if(run!=null){run.finish("FAILED",success,failed,"수집 작업 실패. 마지막 정상 데이터 유지.");runs.save(run);}

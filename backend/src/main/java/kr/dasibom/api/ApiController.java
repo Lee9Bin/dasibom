@@ -27,9 +27,9 @@ public class ApiController {
         return Map.of("items",matches.stream().skip((long)page*size).limit(size).map(catalog::summary).toList(),"total",matches.size(),"page",page,"size",size);
     }
     @GetMapping("/regions/{code}") public Object region(@PathVariable @Pattern(regexp="\\d{5}") String code){return catalog.summary(catalog.find(code));}
-    @GetMapping("/regions/{code}/photos") public Object photos(@PathVariable String code){catalog.find(code);return Map.of("items",catalog.photos(code));}
-    @GetMapping("/regions/{code}/places") public Object places(@PathVariable String code){return Map.of("items",catalog.dataset(code,"places"),"source","한국관광공사 국문 관광정보");}
-    @GetMapping("/regions/{code}/crowding") public Object crowd(@PathVariable String code){return Map.of("items",catalog.dataset(code,"crowding"),"source","한국관광공사 관광지 집중률 예측");}
+    @GetMapping("/regions/{code}/photos") public Object photos(@PathVariable String code){return catalog.datasetResponse(code,"photos","한국관광공사 포토코리아");}
+    @GetMapping("/regions/{code}/places") public Object places(@PathVariable String code){return catalog.datasetResponse(code,"places","한국관광공사 국문 관광정보");}
+    @GetMapping("/regions/{code}/crowding") public Object crowd(@PathVariable String code){return catalog.datasetResponse(code,"crowding","한국관광공사 관광지 집중률 예측");}
     @GetMapping("/regions/{code}/metrics") public Object metrics(@PathVariable String code){catalog.find(code);return Map.of("status","PENDING","items",List.of(),"message","전국 동일 기준월 데이터가 모이면 공개합니다.");}
     @GetMapping("/map/regions") public Object map(){return Map.of("items",catalog.all().stream().map(catalog::summary).toList(),"geometryType","CENTROID");}
     @GetMapping("/data-status") public Object status(){return Map.of("datasets",store.status(),"syncRunning",sync.running(),"coverage","EDITORIAL_8_REGIONS");}

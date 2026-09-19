@@ -9,6 +9,7 @@ export async function getRegions(query=""):Promise<Region[]|null>{
   const parsed=regionSchema.array().safeParse(data.items);return parsed.success?parsed.data:null;
 }
 export async function getRegion(code:string) { if(!/^\d{5}$/.test(code))return null; const data=await api<unknown>(`/regions/${code}`);const parsed=regionSchema.safeParse(data);return parsed.success?parsed.data:null; }
-export const getPhotos=(code:string)=>api<{items:Photo[]}>(`/regions/${code}/photos`);
-export const getPlaces=(code:string)=>api<{items:Place[]}>(`/regions/${code}/places`);
-export const getCrowd=(code:string)=>api<{items:Crowd[]}>(`/regions/${code}/crowding`);
+type Dataset<T>={items:T[];fetchedAt:string|null;stale:boolean};
+export const getPhotos=(code:string)=>api<Dataset<Photo>>(`/regions/${code}/photos`);
+export const getPlaces=(code:string)=>api<Dataset<Place>>(`/regions/${code}/places`);
+export const getCrowd=(code:string)=>api<Dataset<Crowd>>(`/regions/${code}/crowding`);

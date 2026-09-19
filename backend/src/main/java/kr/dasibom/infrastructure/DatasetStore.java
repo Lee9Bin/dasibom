@@ -26,4 +26,7 @@ public class DatasetStore {
     public List<Map<String,Object>> status() {
         return repository.findAll().stream().map(d->Map.<String,Object>of("regionCode",d.getId().getRegionCode(),"kind",d.getId().getKind(),"fetchedAt",d.getFetchedAt())).toList();
     }
+    public java.time.Instant fetchedAt(String code,String kind) {
+        return repository.findById(new Dataset.Id(code,kind)).map(Dataset::getFetchedAt).orElse(null);
+    }
 }

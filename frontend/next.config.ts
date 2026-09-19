@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
+  output: "standalone",
   poweredByHeader: false,
-  images: { remotePatterns: [{ protocol: "https", hostname: "tong.visitkorea.or.kr" }], formats: ["image/webp"] },
+  // Serve the official original images; avoid image processing on the 1 GB judge server.
+  images: { unoptimized: true, remotePatterns: [{ protocol: "https", hostname: "tong.visitkorea.or.kr" }] },
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

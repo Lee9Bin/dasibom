@@ -1,0 +1,80 @@
+name: dasibom
+x-defaults: &defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "5m", max-file: "2" }
+services:
+  mysql:
+    <<: *defaults
+    image: mysql:8.4
+    mem_limit: 256m
+    memswap_limit: 512m
+    environment:
+      MYSQL_DATABASE: dasibom
+      MYSQL_USER: dasibom
+      MYSQL_PASSWORD: ${DB_PASSWORD:?required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      TZ: Asia/Seoul
+    command: ["--innodb-buffer-pool-size=64M", "--innodb-redo-log-capacity=64M", "--performance-schema=OFF", "--max-connections=20", "--table-open-cache=128", "--temptable-max-ram=16M", "--mysqlx=OFF"]
+    volumes: ["mysql_data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -u dasibom -D dasibom -e "SELECT 1" >/dev/null 2>&1']
+      interval: 20s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+  backend:
+    <<: *defaults
+    image: dasibom-backend:${RELEASE:-latest}
+    mem_limit: 352m
+    memswap_limit: 512m
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/dasibom?connectionTimeZone=Asia/Seoul
+      DB_USERNAME: dasibom
+      DB_PASSWORD: ${DB_PASSWORD:?required}
+      TOUR_API_SERVICE_KEY: ${TOUR_API_SERVICE_KEY:?required}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?required}
+      APP_ORIGIN: https://${SITE_HOST:?required}
+      COOKIE_SECURE: "true"
+      SYNC_ENABLED: "true"
+      TZ: Asia/Seoul
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      mysql: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+  frontend:
+    <<: *defaults
+    image: dasibom-frontend:${RELEASE:-latest}
+    mem_limit: 224m
+    memswap_limit: 384m
+    environment:
+      BACKEND_URL: http://backend:8080
+      NEXT_PUBLIC_SITE_URL: https://${SITE_HOST:?required}
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 40s
+  caddy:
+    <<: *defaults
+    image: caddy:2-alpine
+    mem_limit: 64m
+    environment:
+      SITE_HOST: ${SITE_HOST:?required}
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data", "caddy_config:/config"]
+    depends_on:
+      frontend: {condition: service_healthy}
+volumes:
+  mysql_data:
+  caddy_data:
+  caddy_config:

@@ -1,5 +1,9 @@
 server:
   port: ${PORT:8080}
+  tomcat:
+    threads:
+      max: 24
+      min-spare: 2
   error:
     include-message: never
     include-stacktrace: never
@@ -10,6 +14,9 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3307/dasibom?connectionTimeZone=Asia/Seoul}
     username: ${DB_USERNAME:dasibom}
     password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
   jpa:
     open-in-view: false
     hibernate:
@@ -30,4 +37,3 @@ dasibom:
   cookie-secure: ${COOKIE_SECURE:false}
   app-origin: ${APP_ORIGIN:http://localhost:3000}
   sync-enabled: ${SYNC_ENABLED:false}
-
