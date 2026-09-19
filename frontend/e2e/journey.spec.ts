@@ -11,7 +11,7 @@ test("홈에서 지역 검색, 상세, 저장, 공유 흐름",async({page})=>{
 test("레이아웃이 화면을 넘치지 않고 빈 검색을 설명한다",async({page})=>{
  await page.goto("/explore?q=없는지역");await expect(page.getByRole("heading",{name:"아직 발견하지 못한 동네예요"})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
- await page.getByRole("button",{name:"필터 초기화"}).click();await expect(page.locator(".region-card")).toHaveCount(8);
+ await page.getByRole("button",{name:"필터 초기화"}).click();await expect(page.locator(".region-card")).toHaveCount(12);await expect(page.getByText(/252개/)).toBeVisible();
 });
 test("관광 사진과 날짜 정보, 지도 탐색이 동작한다",async({page})=>{
  await page.goto("/regions/51130");

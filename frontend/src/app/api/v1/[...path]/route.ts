@@ -10,7 +10,7 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
    headers.set("Origin",origin);
  }
  try{
-  const upstream=await fetch(`${process.env.BACKEND_URL??"http://127.0.0.1:8080"}/api/v1/${path}${request.nextUrl.search}`,{method:request.method,headers,cache:"no-store",signal:AbortSignal.timeout(8000)});
+  const upstream=await fetch(`${process.env.BACKEND_URL??"http://127.0.0.1:8080"}/api/v1/${path}${request.nextUrl.search}`,{method:request.method,headers,cache:"no-store",signal:AbortSignal.timeout(30000)});
   const out=new NextResponse(await upstream.text(),{status:upstream.status,headers:{"Content-Type":upstream.headers.get("content-type")??"application/json","Cache-Control":"no-store"}});
   upstream.headers.getSetCookie().forEach(cookie=>out.headers.append("Set-Cookie",cookie));return out;
  }catch{return NextResponse.json({detail:"서버에 연결하지 못했습니다."},{status:503});}

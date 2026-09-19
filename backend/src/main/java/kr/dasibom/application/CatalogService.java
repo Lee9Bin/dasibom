@@ -2,7 +2,7 @@ package kr.dasibom.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import kr.dasibom.domain.*;
-import kr.dasibom.infrastructure.DatasetStore;
+import kr.dasibom.infrastructure.TourApiClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,50 +12,61 @@ import java.util.*;
 @Service
 public class CatalogService {
     private final RegionRepository regions;
-    private final DatasetStore store;
     private final LikeRepository likes;
-    public CatalogService(RegionRepository regions, DatasetStore store, LikeRepository likes) { this.regions=regions;this.store=store;this.likes=likes; }
+    private final TourApiClient api;
+    public CatalogService(RegionRepository regions, LikeRepository likes, TourApiClient api) { this.regions=regions;this.likes=likes;this.api=api; }
     public Region find(String code) { return regions.findById(code).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"지역을 찾을 수 없습니다.")); }
     public List<Region> all() { return regions.findAll().stream().sorted(Comparator.comparing(Region::getCode)).toList(); }
-    public Map<String,Object> summary(Region r) {
+    public List<Region> editorial() { return all().stream().filter(r->r.getLatitude()!=null&&r.getLongitude()!=null&&r.getAnchorPlace()!=null).toList(); }
+    public Map<String,Object> summary(Region r,boolean withHero) {
         Map<String,Object> result = new LinkedHashMap<>();
         result.put("code",r.getCode());result.put("name",r.getName());result.put("areaCode",r.getAreaCode());result.put("areaName",r.getAreaName());
         result.put("tagline",r.getTagline());result.put("theme",r.getTheme());result.put("latitude",r.getLatitude());result.put("longitude",r.getLongitude());
-        result.put("anchorPlace",r.getAnchorPlace());result.put("source","한국관광공사 TourAPI");
-        var photos=photos(r.getCode()); result.put("heroPhoto",photos.isEmpty()?null:photos.getFirst());
-        result.put("dataStatus",photos.isEmpty()?"PENDING":"AVAILABLE");result.put("hiddenScore",null);result.put("attractionScore",null);
-        result.put("likes",likes.countByIdRegionCode(r.getCode()));
+        result.put("anchorPlace",r.getAnchorPlace());result.put("source","출처: ⓒ한국관광공사");
+        var hero=withHero?heroPhoto(r):null;result.put("heroPhoto",hero);
+        result.put("dataStatus",withHero?(hero==null?"UNAVAILABLE":"LIVE"):"NOT_REQUESTED");result.put("hiddenScore",null);result.put("attractionScore",null);
+        result.put("likes",withHero?likes.countByIdRegionCode(r.getCode()):0);
         return result;
     }
-    public List<Map<String,Object>> photos(String code) {
-        String name=find(code).getName();
+    public Map<String,Object> summary(Region r) { return summary(r,true); }
+    public List<Map<String,Object>> photos(String code) { return photos(find(code),48,36); }
+    private Map<String,Object> heroPhoto(Region region) {
+        var photos=photos(region,12,1);return photos.isEmpty()?null:photos.getFirst();
+    }
+    private List<Map<String,Object>> photos(Region region,int rows,int limit) {
         List<Map<String,Object>> photos=new ArrayList<>(); Set<String> urls=new HashSet<>();
-        for(JsonNode n:store.read(code,"photos")) {
-            if(!matchesPhotoRegion(name,n))continue;
+        for(JsonNode n:api.fetch("PhotoGalleryService1/gallerySearchList1",Map.of("keyword",region.getName(),"arrange","C"),rows)) {
+            if(!matchesPhotoRegion(region.getName(),n))continue;
             String url=safeImage(n.path("galWebImageUrl").asText());
-            if(url==null || !urls.add(url))continue;
+            if(url==null || !urls.add(url) || !api.imageAvailable(url))continue;
             photos.add(Map.of("id",n.path("galContentId").asText(),"url",url,"title",n.path("galTitle").asText(),
                 "photographer",n.path("galPhotographer").asText(),"location",n.path("galPhotographyLocation").asText(),
-                "month",n.path("galPhotographyMonth").asText(),"copyrightType",n.path("cpyrhtDivCd").asText("CHECK_SOURCE"),"source","한국관광공사 포토코리아"));
+                "month",n.path("galPhotographyMonth").asText(),"copyrightType",n.path("cpyrhtDivCd").asText("CHECK_SOURCE"),"source","출처: ⓒ한국관광콘텐츠랩"));
+            if(photos.size()>=limit)break;
         }
         return photos;
     }
     public Map<String,Object> today() {
-        var eligible=all().stream().filter(r->!photos(r.getCode()).isEmpty()).toList();
+        var eligible=editorial();
         if(eligible.isEmpty()) return Map.of("status","PENDING","message","오늘의 여행 사진을 준비하고 있어요.");
         long day=LocalDate.now(ZoneId.of("Asia/Seoul")).toEpochDay();
-        var result=summary(eligible.get(Math.floorMod(day,eligible.size())));
-        result.put("selectionType","EDITORIAL_ROTATION"); result.put("date",LocalDate.now(ZoneId.of("Asia/Seoul")).toString());
-        return result;
+        for(int offset=0;offset<eligible.size();offset++) {
+            var result=summary(eligible.get(Math.floorMod(day+offset,eligible.size())));
+            if(result.get("heroPhoto")!=null){result.put("selectionType","EDITORIAL_ROTATION");result.put("date",LocalDate.now(ZoneId.of("Asia/Seoul")).toString());return result;}
+        }
+        return Map.of("status","PENDING","message","오늘의 여행 사진을 준비하고 있어요.");
     }
-    public List<JsonNode> dataset(String code,String kind) { find(code);return store.read(code,kind); }
-    public Map<String,Object> datasetResponse(String code,String kind,String source) {
-        find(code);
+    public List<JsonNode> places(String code) {
+        Region r=find(code);return api.fetch("KorService2/areaBasedList2",Map.of("lDongRegnCd",r.getAreaCode(),"lDongSignguCd",r.getCode().substring(2),"arrange","Q","contentTypeId","12"),12);
+    }
+    public List<JsonNode> crowding(String code) {
+        Region r=find(code);Map<String,String> params=new LinkedHashMap<>();params.put("areaCd",r.getAreaCode());params.put("signguCd",r.getCode());
+        if(r.getAnchorPlace()!=null&&!r.getAnchorPlace().isBlank())params.put("tAtsNm",r.getAnchorPlace());
+        return api.fetch("TatsCnctrRateService/tatsCnctrRatedList",params,30);
+    }
+    public Map<String,Object> liveResponse(List<?> items,String source) {
         Map<String,Object> result=new LinkedHashMap<>();
-        result.put("items",kind.equals("photos")?photos(code):store.read(code,kind));
-        result.put("source",source);
-        var fetched=store.fetchedAt(code,kind);result.put("fetchedAt",fetched);
-        result.put("stale",fetched==null || fetched.isBefore(Instant.now().minus(Duration.ofDays(kind.equals("crowding")?2:7))));
+        result.put("items",items);result.put("source",source);result.put("fetchedAt",Instant.now());result.put("stale",false);result.put("mode","LIVE");
         return result;
     }
     public static String safeImage(String url) {

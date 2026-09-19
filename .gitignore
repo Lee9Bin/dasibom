@@ -39,4 +39,6 @@ test-results/
 .DS_Store
 *.tsbuildinfo
 .runtime/
+.idea/
+.tools/
 !backend/gradle/wrapper/gradle-wrapper.jar

@@ -7,25 +7,34 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.*;
 
 @Component
 public class TourApiClient {
+    private static final Logger log=LoggerFactory.getLogger(TourApiClient.class);
     private final RestClient client;
+    private final HttpClient imageClient;
     private final ObjectMapper mapper;
     private final String key;
     public TourApiClient(ObjectMapper mapper, @Value("${dasibom.tour-api-key}") String key) {
         this.mapper = mapper;
         this.key = key;
-        var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
+        this.imageClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NORMAL).build();
+        var factory = new JdkClientHttpRequestFactory(imageClient);
         factory.setReadTimeout(Duration.ofSeconds(20));
         this.client = RestClient.builder().requestFactory(factory).build();
     }
     public boolean configured() { return !key.isBlank(); }
     public List<JsonNode> fetch(String operation, Map<String,String> params, int rows) {
         if (!configured()) throw new TourApiException("API_KEY_MISSING");
+        long started=System.nanoTime();
         var uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/B551011/" + operation)
             .queryParam("serviceKey", key).queryParam("MobileOS", "ETC")
             .queryParam("MobileApp", "DasibomKorea").queryParam("_type", "json")
@@ -33,12 +42,32 @@ public class TourApiClient {
         params.forEach(uri::queryParam);
         try {
             String raw = client.get().uri(uri.build().encode().toUri()).retrieve().body(String.class);
-            return parse(mapper.readTree(raw));
-        } catch (TourApiException e) { throw e; }
+            var items=parse(mapper.readTree(raw));
+            log.info("tourapi_call operation={} status=success items={} durationMs={}",operation,items.size(),elapsedMillis(started));
+            return items;
+        } catch (TourApiException e) { log.warn("tourapi_call operation={} status={} durationMs={}",operation,e.getMessage(),elapsedMillis(started));throw e; }
         catch (Exception e) {
             // Never propagate the original exception: its URL can contain the service key.
+            log.warn("tourapi_call operation={} status=unavailable durationMs={}",operation,elapsedMillis(started));
             throw new TourApiException("UPSTREAM_UNAVAILABLE");
         }
+    }
+    private static long elapsedMillis(long started){return (System.nanoTime()-started)/1_000_000;}
+    public boolean imageAvailable(String rawUrl) {
+        try {
+            URI uri=URI.create(rawUrl.replaceFirst("^http:","https:"));
+            if(!"https".equalsIgnoreCase(uri.getScheme()) || !"tong.visitkorea.or.kr".equalsIgnoreCase(uri.getHost()))return false;
+            var request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(8))
+                .header("Range","bytes=0-0").header("User-Agent","DasibomKorea/1.0").GET().build();
+            var response=imageClient.send(request,HttpResponse.BodyHandlers.discarding());
+            return usableImageResponse(response.statusCode(),response.headers().firstValue("Content-Type"));
+        }catch(Exception e){
+            if(e instanceof InterruptedException)Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+    public static boolean usableImageResponse(int status,Optional<String> contentType) {
+        return (status==200 || status==206) && contentType.map(v->v.toLowerCase(Locale.ROOT).startsWith("image/")).orElse(false);
     }
     public static List<JsonNode> parse(JsonNode root) {
         JsonNode response = root.path("response");
@@ -54,4 +83,3 @@ public class TourApiClient {
         public TourApiException(String code) { super(code); }
     }
 }
-

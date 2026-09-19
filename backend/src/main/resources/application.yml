@@ -33,7 +33,5 @@ management:
       show-details: never
 dasibom:
   tour-api-key: ${TOUR_API_SERVICE_KEY:}
-  admin-token: ${ADMIN_TOKEN:}
   cookie-secure: ${COOKIE_SECURE:false}
   app-origin: ${APP_ORIGIN:http://localhost:3000}
-  sync-enabled: ${SYNC_ENABLED:false}

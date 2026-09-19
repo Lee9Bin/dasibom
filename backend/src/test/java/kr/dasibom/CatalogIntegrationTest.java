@@ -20,7 +20,7 @@ class CatalogIntegrationTest {
     @Autowired MockMvc mvc;
     @Test void migratesAndFiltersRealRegions()throws Exception{
         mvc.perform(get("/api/v1/regions").param("q","원주")).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].code").value("51130")).andExpect(jsonPath("$.items[0].hiddenScore").isEmpty());
-        mvc.perform(get("/api/v1/regions").param("size","101")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/regions").param("size","301")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/regions/99999")).andExpect(status().isNotFound());
     }
     @Test void likesAreIdempotentAndRejectCrossOrigin()throws Exception{
@@ -29,5 +29,5 @@ class CatalogIntegrationTest {
         mvc.perform(put("/api/v1/regions/51130/like").header("Origin","https://evil.example")).andExpect(status().isForbidden());
         for(int i=0;i<2;i++)mvc.perform(delete("/api/v1/regions/51130/like").header("Origin","http://localhost:3000").cookie(cookie)).andExpect(status().isOk()).andExpect(jsonPath("$.count").value(0));
     }
-    @Test void adminIsNotPublic()throws Exception{mvc.perform(post("/api/v1/admin/sync/catalog")).andExpect(status().isUnauthorized());}
+    @Test void removedSyncApiIsNotPublic()throws Exception{mvc.perform(post("/api/v1/admin/sync/catalog")).andExpect(status().isNotFound());}
 }

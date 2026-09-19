@@ -11,8 +11,8 @@ public class Region {
     private String areaName;
     private String tagline;
     private String theme;
-    private double latitude;
-    private double longitude;
+    private Double latitude;
+    private Double longitude;
     private String anchorPlace;
     protected Region() {}
     public String getCode() { return code; }
@@ -21,8 +21,7 @@ public class Region {
     public String getAreaName() { return areaName; }
     public String getTagline() { return tagline; }
     public String getTheme() { return theme; }
-    public double getLatitude() { return latitude; }
-    public double getLongitude() { return longitude; }
+    public Double getLatitude() { return latitude; }
+    public Double getLongitude() { return longitude; }
     public String getAnchorPlace() { return anchorPlace; }
 }
-

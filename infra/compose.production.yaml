@@ -34,10 +34,8 @@ services:
       DB_USERNAME: dasibom
       DB_PASSWORD: ${DB_PASSWORD:?required}
       TOUR_API_SERVICE_KEY: ${TOUR_API_SERVICE_KEY:?required}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:?required}
       APP_ORIGIN: https://${SITE_HOST:?required}
       COOKIE_SECURE: "true"
-      SYNC_ENABLED: "true"
       TZ: Asia/Seoul
     ports: ["127.0.0.1:8080:8080"]
     depends_on:

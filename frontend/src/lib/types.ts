@@ -1,6 +1,6 @@
 import { z } from "zod";
 export const photoSchema = z.object({ id:z.string(), url:z.string().url(), title:z.string(), photographer:z.string(), location:z.string(), month:z.string(), copyrightType:z.string(), source:z.string() });
-export const regionSchema = z.object({ code:z.string(), name:z.string(), areaName:z.string(), areaCode:z.string(), tagline:z.string(), theme:z.string(), latitude:z.number(), longitude:z.number(), anchorPlace:z.string(), heroPhoto:photoSchema.nullable(), dataStatus:z.string(), hiddenScore:z.number().nullable(), attractionScore:z.number().nullable(), likes:z.number(), source:z.string() });
+export const regionSchema = z.object({ code:z.string(), name:z.string(), areaName:z.string(), areaCode:z.string(), tagline:z.string(), theme:z.string(), latitude:z.number().nullable(), longitude:z.number().nullable(), anchorPlace:z.string().nullable(), heroPhoto:photoSchema.nullable(), dataStatus:z.string(), hiddenScore:z.number().nullable(), attractionScore:z.number().nullable(), likes:z.number(), source:z.string() });
 export type Region = z.infer<typeof regionSchema>;
 export type Photo = z.infer<typeof photoSchema>;
 export type Place = { contentid:string; title:string; addr1:string; firstimage?:string; cpyrhtDivCd?:string; mapx?:string; mapy?:string };
