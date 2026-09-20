@@ -86,18 +86,16 @@ public class CatalogService {
     }
     public Map<String,Object> today() {
         LocalDate today=LocalDate.now(ZoneId.of("Asia/Seoul"));
-        VisitorInsightService.Snapshot snapshot;
-        try{snapshot=visitors.latest();}catch(Exception e){snapshot=new VisitorInsightService.Snapshot(null,Map.of(),Map.of());}
-        final var visitorSnapshot=snapshot;
         var eligible=all().stream().filter(r->!"NONE".equals(r.getPopulationStatus())||r.isHalfPrice()).sorted(Comparator.comparing(Region::getCode)).toList();
         List<Map.Entry<Region,Map<String,Object>>> awarded=new ArrayList<>();
-        List<JsonNode> globalAwards=List.of();try{globalAwards=api.fetch("PhokoAwrdService/phokoAwrdSyncList",Map.of("showflag","1"),100);}catch(Exception ignored){}
-        if(!globalAwards.isEmpty()){
-            for(Region region:eligible){var photos=awardPhotos(region,globalAwards);if(!photos.isEmpty())awarded.add(Map.entry(region,photos.getFirst()));}
-        }else try(var executor=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()){
+        VisitorInsightService.Snapshot snapshot=new VisitorInsightService.Snapshot(null,Map.of(),Map.of());
+        try(var executor=java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()){
+            var visitorFuture=executor.submit(visitors::latest);
             var futures=eligible.stream().map(Region::getAreaCode).distinct().collect(java.util.stream.Collectors.toMap(a->a,a->executor.submit(()->api.fetch("PhokoAwrdService/phokoAwrdList",Map.of("lDongRegnCd",a,"arrange","C"),100))));Map<String,List<JsonNode>> byArea=new HashMap<>();for(var future:futures.entrySet())try{byArea.put(future.getKey(),future.getValue().get());}catch(Exception ignored){}
             for(Region region:eligible){var photos=awardPhotos(region,byArea.getOrDefault(region.getAreaCode(),List.of()));if(!photos.isEmpty())awarded.add(Map.entry(region,photos.getFirst()));}
+            try{snapshot=visitorFuture.get();}catch(Exception ignored){}
         }
+        final var visitorSnapshot=snapshot;
         awarded.sort(Comparator.<Map.Entry<Region,Map<String,Object>>>comparingInt(e->visitorSnapshot.hiddenScores().getOrDefault(e.getKey().getCode(),0)).reversed().thenComparing(e->e.getKey().getCode()));
         if(!awarded.isEmpty()){
             var selected=awarded.get(Math.floorMod(today.toEpochDay(),awarded.size()));var result=summary(selected.getKey(),false);result.put("heroPhoto",selected.getValue());result.put("dataStatus","LIVE");result.put("hiddenScore",snapshot.hiddenScores().get(selected.getKey().getCode()));result.put("selectionType","LOW_VISITOR_AWARD_ROTATION");result.put("selectionReason","인구감소·관심 또는 반값여행 지역 중 관광사진 수상작이 있고 방문량이 낮은 후보군");result.put("visitorDataAsOf",snapshot.asOf());result.put("candidateCount",awarded.size());result.put("date",today.toString());return result;
