@@ -17,14 +17,15 @@ test("관광 사진과 날짜 정보, 지도 탐색이 동작한다",async({page
  await page.goto("/regions/51130");
  await expect(page.locator(".detail-photo img")).toBeVisible();
  await expect(page.locator(".place-card").first()).toBeVisible();
- const photos=page.locator(".photo-grid figure");
- await expect(photos).toHaveCount(12);
- await page.getByRole("button",{name:/사진 더 보기/}).click();
- await expect(photos).toHaveCount(24);
+ await expect(page.getByRole("button",{name:/맛집 50선/})).toBeVisible();
+ await page.getByRole("button",{name:/맛집 50선/}).click();await expect(page.locator(".place-card").first()).toBeVisible();
+ await expect(page.locator(".photo-grid figure").first()).toBeVisible();
+ await expect(page.locator(".gallery-sentinel")).toBeAttached();
  await expect(page.locator(".calendar-cell").first()).toBeVisible();
  await page.goto("/explore");
+ await page.getByRole("button",{name:/인구감소지역/}).click();await expect(page.getByText(/89개/)).toBeVisible();
  await page.getByRole("button",{name:"지도로 보기"}).click();
- await expect(page.locator(".map-pin")).toHaveCount(8);
+ await expect(page.locator(".region-map canvas")).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
 });
 test("공개 API 상태와 관리자 차단, 좋아요 멱등성",async({request,baseURL})=>{

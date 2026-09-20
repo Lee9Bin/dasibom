@@ -15,6 +15,8 @@ public class ApiExceptionHandler {
     ProblemDetail unavailable(IllegalStateException e){return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,"데이터 연결을 준비 중입니다. 잠시 후 다시 시도해 주세요.");}
     @ExceptionHandler(TourApiClient.TourApiException.class)
     ProblemDetail upstream(TourApiClient.TourApiException e){return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,"공공 API 연결이 원활하지 않습니다. 잠시 후 다시 시도해 주세요.");}
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    ProblemDetail missing(org.springframework.web.servlet.resource.NoResourceFoundException e){return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,"요청한 API를 찾을 수 없습니다.");}
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception e){return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,"요청을 처리하지 못했습니다.");}
 }

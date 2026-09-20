@@ -14,6 +14,8 @@ public class Region {
     private Double latitude;
     private Double longitude;
     private String anchorPlace;
+    private String populationStatus;
+    private boolean halfPrice;
     protected Region() {}
     public String getCode() { return code; }
     public String getName() { return name; }
@@ -24,4 +26,6 @@ public class Region {
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
     public String getAnchorPlace() { return anchorPlace; }
+    public String getPopulationStatus() { return populationStatus; }
+    public boolean isHalfPrice() { return halfPrice; }
 }

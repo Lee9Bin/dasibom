@@ -1,13 +1,16 @@
 "use client";
-import { Heart,Bookmark,Share2,Check } from "lucide-react";
-import {useState} from "react";
+import { Heart,Bookmark,Share2,Check,MessageCircle,Instagram } from "lucide-react";
+import {useEffect,useState} from "react";
 import {useSavedRegions} from "@/lib/saved";
 import {useQuery,useMutation,useQueryClient} from "@tanstack/react-query";
-export function Reactions({code,name}:{code:string;name:string}){
+declare global{interface Window{Kakao?:{init:(key:string)=>void;isInitialized:()=>boolean;Share:{sendDefault:(options:unknown)=>void}}}}
+export function Reactions({code,name,tagline,imageUrl}:{code:string;name:string;tagline:string;imageUrl?:string}){
  const {codes,toggle}=useSavedRegions();const saved=codes.includes(code);const [message,setMessage]=useState("");const client=useQueryClient();
  const {data}=useQuery<{liked:boolean;count:number}>({queryKey:["like",code],queryFn:async()=>{const r=await fetch(`/api/v1/regions/${code}/like`);if(!r.ok)throw Error();return r.json();}});
  const mutation=useMutation({mutationFn:async()=>{const r=await fetch(`/api/v1/regions/${code}/like`,{method:data?.liked?"DELETE":"PUT"});if(!r.ok)throw Error();return r.json();},onSuccess:value=>{client.setQueryData(["like",code],value);setMessage("");},onError:()=>setMessage("좋아요를 저장하지 못했어요. 다시 시도해 주세요.")});
  function save(){try{toggle(code);setMessage(saved?"저장을 취소했어요.":"이 브라우저에 여행을 저장했어요.");}catch{setMessage("브라우저 저장 공간을 사용할 수 없어요.");}}
- async function share(){try{if(navigator.share){await navigator.share({title:`다시봄, ${name}`,url:location.href});}else{await navigator.clipboard.writeText(location.href);setMessage("여행 링크를 복사했어요.");}}catch(e){if(!(e instanceof DOMException&&e.name==="AbortError"))setMessage("공유하지 못했어요. 주소창의 링크를 복사해 주세요.");}}
- return <div className="reactions"><button disabled={mutation.isPending||!data} aria-pressed={data?.liked??false} onClick={()=>mutation.mutate()}><Heart size={18} fill={data?.liked?"currentColor":"none"}/>{data?.count??0}</button><button aria-pressed={saved} onClick={save}>{saved?<Check size={18}/>:<Bookmark size={18}/>} {saved?"저장됨":"여행 저장"}</button><button onClick={share}><Share2 size={18}/> 공유</button><span role="status" className="action-message">{message}</span></div>;
+ useEffect(()=>{const key=process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;if(!key||document.querySelector('script[data-dasibom-kakao]'))return;const script=document.createElement("script");script.src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js";script.integrity="sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nka";script.crossOrigin="anonymous";script.dataset.dasibomKakao="true";script.onload=()=>{if(window.Kakao&&!window.Kakao.isInitialized())window.Kakao.init(key)};document.head.appendChild(script);},[]);
+ async function nativeShare(channel?:string){try{if(navigator.share){await navigator.share({title:`다시봄, ${name}`,text:tagline,url:location.href});setMessage(channel?`${channel} 앱을 선택해 공유해 주세요.`:"");}else{await navigator.clipboard.writeText(`${tagline}\n${location.href}`);setMessage("소개와 여행 링크를 복사했어요.");}}catch(e){if(!(e instanceof DOMException&&e.name==="AbortError"))setMessage("공유하지 못했어요. 주소창의 링크를 복사해 주세요.");}}
+ function kakao(){if(window.Kakao?.isInitialized()){window.Kakao.Share.sendDefault({objectType:"feed",content:{title:`다시봄, ${name}`,description:tagline,imageUrl:imageUrl??`${location.origin}/opengraph-image`,link:{mobileWebUrl:location.href,webUrl:location.href}},buttons:[{title:"이 동네 만나보기",link:{mobileWebUrl:location.href,webUrl:location.href}}]});}else void nativeShare("카카오톡");}
+ return <div className="reactions"><button disabled={mutation.isPending||!data} aria-pressed={data?.liked??false} onClick={()=>mutation.mutate()}><Heart size={18} fill={data?.liked?"currentColor":"none"}/>{data?.count??0}</button><button aria-pressed={saved} onClick={save}>{saved?<Check size={18}/>:<Bookmark size={18}/>} {saved?"저장됨":"여행 저장"}</button><button onClick={kakao}><MessageCircle size={18}/> 카카오톡</button><button onClick={()=>nativeShare("인스타그램")}><Instagram size={18}/> 인스타그램</button><button aria-label="기타 앱으로 공유" onClick={()=>nativeShare()}><Share2 size={18}/></button><span role="status" className="action-message">{message}</span></div>;
 }

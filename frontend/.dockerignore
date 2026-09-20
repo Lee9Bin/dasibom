@@ -4,3 +4,5 @@
 !.next/standalone/**
 !.next/static
 !.next/static/**
+!public
+!public/**

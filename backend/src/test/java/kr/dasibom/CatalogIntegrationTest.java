@@ -22,6 +22,8 @@ class CatalogIntegrationTest {
         mvc.perform(get("/api/v1/regions").param("q","원주")).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].code").value("51130")).andExpect(jsonPath("$.items[0].hiddenScore").isEmpty());
         mvc.perform(get("/api/v1/regions").param("size","301")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/regions/99999")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/filters")).andExpect(status().isOk()).andExpect(jsonPath("$.populationDecline").value(89)).andExpect(jsonPath("$.populationInterest").value(18)).andExpect(jsonPath("$.halfPrice").value(25));
+        mvc.perform(get("/api/v1/regions").param("policy","HALF_PRICE").param("size","300")).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(25));
     }
     @Test void likesAreIdempotentAndRejectCrossOrigin()throws Exception{
         var cookie=new Cookie("dasibom_visitor","35a19bea-85bd-4e93-96c7-54b8c220bb31");

@@ -18,6 +18,7 @@ import java.util.*;
 
 @Component
 public class TourApiClient {
+    public record PagedResult(List<JsonNode> items,int totalCount,int pageNo,int numOfRows) {}
     private static final Logger log=LoggerFactory.getLogger(TourApiClient.class);
     private final RestClient client;
     private final HttpClient imageClient;
@@ -33,18 +34,21 @@ public class TourApiClient {
     }
     public boolean configured() { return !key.isBlank(); }
     public List<JsonNode> fetch(String operation, Map<String,String> params, int rows) {
+        return fetchPage(operation,params,rows,1).items();
+    }
+    public PagedResult fetchPage(String operation, Map<String,String> params, int rows,int page) {
         if (!configured()) throw new TourApiException("API_KEY_MISSING");
         long started=System.nanoTime();
         var uri = UriComponentsBuilder.fromUriString("https://apis.data.go.kr/B551011/" + operation)
             .queryParam("serviceKey", key).queryParam("MobileOS", "ETC")
             .queryParam("MobileApp", "DasibomKorea").queryParam("_type", "json")
-            .queryParam("numOfRows", rows).queryParam("pageNo", 1);
+            .queryParam("numOfRows", rows).queryParam("pageNo", page);
         params.forEach(uri::queryParam);
         try {
             String raw = client.get().uri(uri.build().encode().toUri()).retrieve().body(String.class);
-            var items=parse(mapper.readTree(raw));
-            log.info("tourapi_call operation={} status=success items={} durationMs={}",operation,items.size(),elapsedMillis(started));
-            return items;
+            var result=parsePage(mapper.readTree(raw));
+            log.info("tourapi_call operation={} status=success items={} page={} total={} durationMs={}",operation,result.items().size(),page,result.totalCount(),elapsedMillis(started));
+            return result;
         } catch (TourApiException e) { log.warn("tourapi_call operation={} status={} durationMs={}",operation,e.getMessage(),elapsedMillis(started));throw e; }
         catch (Exception e) {
             // Never propagate the original exception: its URL can contain the service key.
@@ -70,14 +74,21 @@ public class TourApiClient {
         return (status==200 || status==206) && contentType.map(v->v.toLowerCase(Locale.ROOT).startsWith("image/")).orElse(false);
     }
     public static List<JsonNode> parse(JsonNode root) {
+        return parsePage(root).items();
+    }
+    public static PagedResult parsePage(JsonNode root) {
         JsonNode response = root.path("response");
         String code = response.path("header").path("resultCode").asText();
         if (!"0000".equals(code) && !"00".equals(code)) throw new TourApiException("UPSTREAM_REJECTED");
-        JsonNode items = response.path("body").path("items").path("item");
-        if (items.isMissingNode() || items.isNull() || items.isTextual()) return List.of();
-        if (items.isObject()) return List.of(items);
-        if (items.isArray()) { List<JsonNode> result = new ArrayList<>(); items.forEach(result::add); return result; }
-        throw new TourApiException("UPSTREAM_FORMAT_ERROR");
+        JsonNode body=response.path("body");
+        JsonNode items = body.path("items").path("item");
+        List<JsonNode> result=new ArrayList<>();
+        if (!(items.isMissingNode() || items.isNull() || items.isTextual())) {
+            if (items.isObject()) result.add(items);
+            else if (items.isArray()) items.forEach(result::add);
+            else throw new TourApiException("UPSTREAM_FORMAT_ERROR");
+        }
+        return new PagedResult(List.copyOf(result),body.path("totalCount").asInt(result.size()),body.path("pageNo").asInt(1),body.path("numOfRows").asInt(result.size()));
     }
     public static class TourApiException extends RuntimeException {
         public TourApiException(String code) { super(code); }

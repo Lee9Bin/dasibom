@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-const allowed=/^(home\/today|regions(?:\/\d{5}(?:\/(photos|places|crowding|metrics|like))?)?|map\/regions|data-status)$/;
+const allowed=/^(home\/today|regions(?:\/\d{5}(?:\/(photos|places|crowding|metrics|recommendations|like))?)?|map\/regions|filters|data-status)$/;
 async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const path=(await params).path.join("/");if(!allowed.test(path))return NextResponse.json({detail:"Not found"},{status:404});
  if(request.method!=="GET"&&!/^regions\/\d{5}\/like$/.test(path))return NextResponse.json({detail:"Method not allowed"},{status:405});
