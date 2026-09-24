@@ -17,7 +17,7 @@ public class RecommendationService {
     public Map<String,Object> recommendations(Region region){
         Map<String,Object> categories=new LinkedHashMap<>();
         for(var entry:TYPES.entrySet()){
-            var page=api.fetchPage("KorService2/areaBasedList2",Map.of("lDongRegnCd",region.getAreaCode(),"lDongSignguCd",region.getCode().substring(2),"arrange","Q","contentTypeId",entry.getValue()),50,1);
+            var page=api.fetchPage("KorService2/areaBasedList2",Map.of("lDongRegnCd",RegionCodes.currentCode(region.getCode()).substring(0,2),"lDongSignguCd",RegionCodes.currentCode(region.getCode()).substring(2),"arrange","Q","contentTypeId",entry.getValue()),50,1);
             categories.put(entry.getKey(),Map.of("items",page.items().stream().map(this::place).toList(),"available",page.totalCount(),"shown",page.items().size()));
         }
         return Map.of("categories",categories,"fetchedAt",Instant.now(),"mode","LIVE","source","출처: ⓒ한국관광공사");

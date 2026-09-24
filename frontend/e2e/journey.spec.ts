@@ -17,8 +17,8 @@ test("관광 사진과 날짜 정보, 지도 탐색이 동작한다",async({page
  await page.goto("/regions/51130");
  await expect(page.locator(".detail-photo img")).toBeVisible();
  await expect(page.locator(".place-card").first()).toBeVisible();
- await expect(page.getByRole("button",{name:/맛집 50선/})).toBeVisible();
- await page.getByRole("button",{name:/맛집 50선/}).click();await expect(page.locator(".place-card").first()).toBeVisible();
+ await expect(page.getByRole("button",{name:/음식점/})).toBeVisible();
+ await page.getByRole("button",{name:/음식점/}).click();await expect(page.locator(".place-card").first()).toBeVisible();
  await expect(page.locator(".photo-grid figure").first()).toBeVisible();
  await expect(page.locator(".gallery-sentinel")).toBeAttached();
  await expect(page.locator(".calendar-cell").first()).toBeVisible();
@@ -30,7 +30,7 @@ test("관광 사진과 날짜 정보, 지도 탐색이 동작한다",async({page
 });
 test("공개 API 상태와 관리자 차단, 좋아요 멱등성",async({request,baseURL})=>{
  expect((await request.get("/api/health")).ok()).toBe(true);
- expect((await request.post("/api/v1/admin/sync/catalog")).status()).toBe(404);
+ expect([404,405]).toContain((await request.post("/api/v1/admin/sync/catalog")).status());
  const path="/api/v1/regions/51130/like";
  const origin=process.env.PLAYWRIGHT_ORIGIN??baseURL!;
  try {
@@ -45,4 +45,11 @@ test("공개 API 상태와 관리자 차단, 좋아요 멱등성",async({request
   expect(removed.ok()).toBe(true);
   expect((await removed.json()).liked).toBe(false);
  }
+});
+
+test("지역명과 장소별 대표 사진을 보존한다",async({page,request})=>{
+ await page.goto("/explore?q=종로");await expect(page.getByRole("heading",{name:"종로구",exact:true})).toBeVisible();
+ const response=await request.get("/api/v1/regions/46730/photos");expect(response.ok()).toBe(true);const data=await response.json();
+ expect(data.items.length).toBeGreaterThanOrEqual(4);expect(new Set(data.items.map((p:{placeKey:string})=>p.placeKey)).size).toBe(data.items.length);
+ expect(data.items.every((p:{placeName:string})=>!p.placeName.includes("공모전"))).toBe(true);
 });

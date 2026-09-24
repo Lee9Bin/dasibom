@@ -1,12 +1,12 @@
 import { z } from "zod";
-export const photoSchema = z.object({ id:z.string(), url:z.string().url(), title:z.string(), photographer:z.string(), location:z.string(), month:z.string(), copyrightType:z.string(), source:z.string(),photoType:z.string().optional(),award:z.string().optional() });
+export const photoSchema = z.object({ id:z.string(), url:z.string().url(), title:z.string(), photographer:z.string(), location:z.string(), month:z.string(), copyrightType:z.string(), source:z.string(),photoType:z.string().optional(),award:z.string().optional(),placeName:z.string().optional(),placeKey:z.string().optional() });
 export const regionSchema = z.object({ code:z.string(), name:z.string(), areaName:z.string(), areaCode:z.string(), tagline:z.string(), theme:z.string(), latitude:z.number().nullable(), longitude:z.number().nullable(), anchorPlace:z.string().nullable(), populationStatus:z.string(),halfPrice:z.boolean(),heroPhoto:photoSchema.nullable(), dataStatus:z.string(), hiddenScore:z.number().nullable(), attractionScore:z.number().nullable(), likes:z.number(), source:z.string(),selectionReason:z.string().optional(),visitorDataAsOf:z.string().nullable().optional(),candidateCount:z.number().optional() });
 export type Region = z.infer<typeof regionSchema>;
 export type Photo = z.infer<typeof photoSchema>;
 export type Place = { contentid:string; title:string; addr1:string; firstimage?:string; cpyrhtDivCd?:string; mapx?:string; mapy?:string };
 export type Crowd = { baseYmd:string; cnctrRate:string; tAtsNm:string };
 export type Metric={code:string;name:string;theme:string;value:number};
-export type RadarMetric={theme:string;value:number};
+export type RadarMetric={theme:string;value:number|null};
 export type MetricsResponse={status:string;baseYm:string|null;items:Metric[];radar:RadarMetric[];attractionScore:number|null;message:string|null;source:string};
 export type RecommendationCategory={items:Place[];available:number;shown:number};
 export type Recommendations={categories:Record<"ATTRACTION"|"FOOD"|"STAY",RecommendationCategory>;fetchedAt:string;source:string};

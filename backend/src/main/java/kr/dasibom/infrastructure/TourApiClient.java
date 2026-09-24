@@ -29,7 +29,7 @@ public class TourApiClient {
         this.key = key;
         this.imageClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NORMAL).build();
         var factory = new JdkClientHttpRequestFactory(imageClient);
-        factory.setReadTimeout(Duration.ofSeconds(20));
+        factory.setReadTimeout(Duration.ofSeconds(8));
         this.client = RestClient.builder().requestFactory(factory).build();
     }
     public boolean configured() { return !key.isBlank(); }
@@ -61,7 +61,7 @@ public class TourApiClient {
         try {
             URI uri=URI.create(rawUrl.replaceFirst("^http:","https:"));
             if(!"https".equalsIgnoreCase(uri.getScheme()) || !"tong.visitkorea.or.kr".equalsIgnoreCase(uri.getHost()))return false;
-            var request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(8))
+            var request=HttpRequest.newBuilder(uri).timeout(Duration.ofSeconds(3))
                 .header("Range","bytes=0-0").header("User-Agent","DasibomKorea/1.0").GET().build();
             var response=imageClient.send(request,HttpResponse.BodyHandlers.discarding());
             return usableImageResponse(response.statusCode(),response.headers().firstValue("Content-Type"));

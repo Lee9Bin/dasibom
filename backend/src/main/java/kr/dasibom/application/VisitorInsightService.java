@@ -23,7 +23,7 @@ public class VisitorInsightService {
             if(rows.isEmpty())continue;
             Map<String,Long> sums=new HashMap<>();
             for(JsonNode row:rows){
-                String code=text(row,"signguCode","signguCd");
+                String code=RegionCodes.serviceCode(text(row,"signguCode","signguCd"));
                 if(code.length()!=5)continue;
                 sums.merge(code,longValue(row,"touNum","visitorNum"),Long::sum);
             }
@@ -35,7 +35,7 @@ public class VisitorInsightService {
         List<Long> ordered=visitors.values().stream().sorted().toList();Map<String,Integer> out=new HashMap<>();
         int denominator=Math.max(1,ordered.size()-1);
         visitors.forEach((code,count)->{
-            int rank=Collections.binarySearch(ordered,count);if(rank<0)rank=0;
+            int rank=0;while(rank<ordered.size()&&ordered.get(rank)<count)rank++;
             out.put(code,(int)Math.round(100.0*(denominator-rank)/denominator));
         });
         return Map.copyOf(out);
